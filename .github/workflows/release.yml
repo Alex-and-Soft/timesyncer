@@ -1,0 +1,165 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Windows (amd64 + arm64) ─────────────────────────────────────────────────
+  # Cross-compiled from Linux; no CGo required for Windows systray (Win32 API).
+  build-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # needed for git describe (version from tag)
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - run: pip install Pillow
+
+      - name: Build windows/amd64 + windows/arm64
+        run: ./build.sh windows
+
+      - name: Package
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          for arch in amd64 arm64; do
+            zip -j "timesyncer-${VERSION}-windows-${arch}.zip" \
+              "dist/windows-${arch}/timesyncer.exe" \
+              "dist/windows-${arch}/install.ps1"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-windows
+          path: timesyncer-*.zip
+
+  # ── Linux amd64 ─────────────────────────────────────────────────────────────
+  # Built natively on ubuntu-latest; requires CGo + GTK headers.
+  build-linux-amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - run: pip install Pillow
+
+      - name: Install GTK dev packages
+        run: sudo apt-get update && sudo apt-get install -y gcc libgtk-3-dev libappindicator3-dev
+
+      - name: Build linux/amd64
+        run: ./build.sh linux/amd64
+
+      - name: Package
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          tar -czf "timesyncer-${VERSION}-linux-amd64.tar.gz" -C dist/linux-amd64 .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux-amd64
+          path: timesyncer-*.tar.gz
+
+  # ── macOS arm64 (Apple Silicon) ─────────────────────────────────────────────
+  build-darwin-arm64:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - run: pip install Pillow
+
+      - name: Build darwin/arm64
+        run: ./build.sh darwin/arm64
+
+      - name: Package
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          (cd dist/darwin-arm64 && zip -r "$GITHUB_WORKSPACE/timesyncer-${VERSION}-darwin-arm64.zip" TimeSyncer.app)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-darwin-arm64
+          path: timesyncer-*.zip
+
+  # ── macOS amd64 (Intel) ─────────────────────────────────────────────────────
+  build-darwin-amd64:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - run: pip install Pillow
+
+      - name: Build darwin/amd64
+        run: ./build.sh darwin/amd64
+
+      - name: Package
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          (cd dist/darwin-amd64 && zip -r "$GITHUB_WORKSPACE/timesyncer-${VERSION}-darwin-amd64.zip" TimeSyncer.app)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-darwin-amd64
+          path: timesyncer-*.zip
+
+  # ── Create GitHub Release and upload assets ─────────────────────────────────
+  release:
+    needs: [build-windows, build-linux-amd64, build-darwin-arm64, build-darwin-amd64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: dist/
+
+      - name: Generate checksums
+        run: cd dist && sha256sum * > checksums.txt
+
+      - uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/*
+          file_glob: true
+          tag: ${{ github.ref }}
+          release_name: TimeSyncer ${{ github.ref_name }}
+          overwrite: true
