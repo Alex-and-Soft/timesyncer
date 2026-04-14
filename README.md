@@ -5,6 +5,18 @@ A lightweight system-tray NTP time synchroniser for Windows, Linux, and macOS �
 Why is your Windows clock always wrong? It drifts by minutes, and the built-in `w32tm` fails silently.  
 TimeSyncer sits in your tray, lets you pick a server from a list, and syncs on demand or automatically every hour.
 
+## Download
+
+**[→ Latest release](https://github.com/Alex-and-Soft/timesyncer/releases/latest)**
+
+| Platform | File |
+|---|---|
+| Windows (x64) | `timesyncer-*-windows-amd64.zip` |
+| Windows (ARM64) | `timesyncer-*-windows-arm64.zip` |
+| macOS (Apple Silicon) | `timesyncer-*-darwin-arm64.zip` |
+| macOS (Intel) | `timesyncer-*-darwin-amd64.zip` |
+| Linux (x64) | `timesyncer-*-linux-amd64.tar.gz` |
+
 ## Features
 
 - **System tray UI** — unobtrusive icon with a context menu
