@@ -23,10 +23,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/getlantern/systray"
 	"timesyncer/internal/errdialog"
 	"timesyncer/internal/ntp"
 	"timesyncer/internal/tray"
+
+	"github.com/getlantern/systray"
 )
 
 func initLog() {
@@ -47,6 +48,7 @@ func initLog() {
 func main() {
 	initLog()
 	log.Println("starting")
+	waitForTray()
 	if err := ntp.CheckPrivileges(); err != nil {
 		errdialog.Show("TimeSyncer — insufficient privileges", err.Error())
 		os.Exit(1)

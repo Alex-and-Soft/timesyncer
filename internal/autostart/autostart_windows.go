@@ -44,6 +44,8 @@ func Enable() error {
 			`$t=New-ScheduledTaskTrigger -AtLogOn -User '%s'; `+
 			`$p=New-ScheduledTaskPrincipal -UserId '%s' -LogonType Interactive -RunLevel Highest; `+
 			`$s=New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0; `+
+			`$s.DisallowStartIfOnBatteries=$false; `+
+			`$s.StopIfGoingOnBatteries=$false; `+
 			`Register-ScheduledTask -TaskName '%s' -Action $a -Trigger $t -Principal $p -Settings $s -Force | Out-Null`,
 		exeEsc, userEsc, userEsc, taskName,
 	)

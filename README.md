@@ -34,7 +34,7 @@ TimeSyncer sits in your tray, lets you pick a server from a list, and syncs on d
 
 | Platform | Privilege needed |
 |---|---|
-| Windows | **Run as Administrator** (required by `SetSystemTime`) |
+| Windows | **Windows 8 or later**, run as Administrator (required by `SetSystemTime`) |
 | Linux | **root** or `CAP_SYS_TIME` |
 | macOS | **root** (`sudo`) |
 
