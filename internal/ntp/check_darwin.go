@@ -18,22 +18,46 @@
 package ntp
 
 import (
-	"fmt"
+	"errors"
 	"os/exec"
 )
 
-// CheckPrivileges verifies that passwordless sudo for /bin/date is configured.
-// The install script writes /etc/sudoers.d/timesyncer to grant this.
-// We probe with `sudo -n /bin/date --help` (no-password, non-destructive).
+const sudoersFile = "/etc/sudoers.d/timesyncer"
+const sudoersRule = `ALL ALL=(root) NOPASSWD: /bin/date`
+
+// setupScript is run via osascript with administrator privileges.
+// It writes the sudoers rule and sets the required permissions.
+// Full paths are used because do shell script has a minimal PATH.
+const setupScript = `/bin/echo '` + sudoersRule + `' > ` + sudoersFile +
+	` && /bin/chmod 440 ` + sudoersFile
+
+// CheckPrivileges ensures passwordless sudo for /bin/date is configured.
+// On first launch it requests administrator access via the standard macOS
+// password dialog (osascript) and writes /etc/sudoers.d/timesyncer automatically.
+// Subsequent launches skip the dialog entirely.
 func CheckPrivileges() error {
-	err := exec.Command("sudo", "-n", "/bin/date", "--help").Run()
-	if err == nil {
+	if canSudoDate() {
 		return nil
 	}
-	return fmt.Errorf(
-		"TimeSyncer is not properly installed.\n\n" +
-			"Please run the install script to grant the required\n" +
-			"permission for setting the system clock:\n\n" +
-			"  sudo bash install.sh",
-	)
+
+	// Ask the user for admin credentials via the native macOS dialog.
+	err := exec.Command("osascript", "-e",
+		`do shell script "`+setupScript+`" with administrator privileges`,
+	).Run()
+	if err != nil {
+		// User cancelled the dialog or entered wrong password.
+		return errors.New("TimeSyncer needs administrator access to set the system clock.\n\nPlease try again and enter your Mac password when prompted.")
+	}
+
+	if !canSudoDate() {
+		return errors.New("Failed to configure the required permission.\nPlease contact support or run: sudo bash install_darwin.sh")
+	}
+	return nil
+}
+
+// canSudoDate reports whether passwordless sudo for /bin/date works.
+// BSD date on macOS does not support --help, so we run it with no arguments
+// (it just prints the current time and exits 0).
+func canSudoDate() bool {
+	return exec.Command("sudo", "-n", "/bin/date").Run() == nil
 }

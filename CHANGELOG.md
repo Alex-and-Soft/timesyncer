@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.2 — 2026-04-23
+
+### Fixed
+
+- **macOS: app wouldn't start without terminal** — on first launch the app showed an error asking to run a shell script manually. Now it simply shows a standard macOS password dialog and sets everything up by itself.
+- **macOS: sync never worked out of the box** — due to a bug in the privilege check, the app always reported missing permissions even after setup was complete. Fixed.
+
+---
+
 ## v1.0.1 — 2026-04-18
 
 ### Fixed
